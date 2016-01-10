@@ -1,5 +1,7 @@
-Takes list of files and makes folder with symlinks to selected files. Uses for making playlists for [fifo-player](https://github.com/alhimik45/fifo-player)
+Takes list of files and makes folder with symlinks to selected files. Uses for making playlists for [fifo-player](https://github.com/alhimik45/fifo-player).
+
 Application is controlled by named pipe. Write anything to pipe to show program window.
+
 Config filename is first command-line argument of program.
 
 Config example:
