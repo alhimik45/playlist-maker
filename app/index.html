@@ -1,0 +1,226 @@
+<html>
+<head>
+	<meta charset=utf-8 />
+	<script type="text/javascript" src="jquery.min.js"></script>
+	<script type="text/javascript" src="list.min.js"></script>
+	<script type="text/javascript" src="list.fuzzysearch.min.js"></script>
+	<script type="text/javascript">
+		var gui = require('nw.gui');
+		var win = gui.Window.get();
+		var fs = require('fs');
+		var spawn = require('child_process').spawnSync;
+		var s = require("./settings").init(gui.App.argv[0]);
+		var music = [];
+		var directory_watcher = null;
+		init_fs(s.music_directory);
+		/**
+		 * Returns array of filenames in given path
+		 * @param  {string} path - directory to list files
+		 * @return {string[]}
+		 */
+		function music_list (path) {
+			return $(fs.readdirSync(path)).filter(function (i,file) {
+				return !fs.lstatSync(path+file).isDirectory();
+			}).map(function (i, file) {
+				return {path: path+file, name: file};
+			}).get();
+		}
+		/**
+		 * Starts watch to given dir_path for update music list
+		 * resets music to actial state
+		 * @param  {string} dir_path - path to directory for watching
+		 */
+		function init_fs (dir_path) {
+			dir_path = dir_path.replace(/\/+$/, "") + "/";
+			if(directory_watcher) directory_watcher.close();
+			music = music_list(dir_path);
+			directory_watcher = fs.watch(dir_path, function () {
+				music = music_list(dir_path);
+			});
+		}
+		/**
+		 * Shows window for selecting 
+		 * @param  {Function}
+		 * @param  {string}
+		 * @param  {Function}
+		 */
+		function show_window () {
+			var $list  = $("#list");
+			$list.html("");
+			music.forEach(function(file){
+				var $div = $("<div class='list-elem'/>");
+				var $chk = $("<input type='checkbox'/>");
+				$chk.attr("id", file.name);
+				$chk.attr("value", file.path);
+				var $label = $("<label/>");
+				$label.attr("for", file.name);
+				$label.text(file.name);
+				$div.append($chk);
+				$div.append($label);
+				$list.append($div);
+			});
+			win.show();
+			win.setPosition("mouse");
+			$("#filter-field").val("");
+			$("#name-field").val("");
+			$("#name-field").focus();
+		}
+		
+		$(function () {
+			win.on('close', function() {
+				win.hide();
+			});
+			$(".close-button").click(function () {
+				win.hide();
+			});
+			$(".ok-button").click(function () {
+				var dirname = $("#name-field").val();
+				if(dirname == ""){
+					$("#name-field").focus();
+					return;
+				}
+				var dirpath = s.base_directory.replace(/\/+$/, "") + "/" + dirname;
+				spawn("mkdir", [dirpath]);
+				var list = [];
+				$("#list").children().each(function(i, div){
+					var $inp = $($(div).children()[0]);
+					if($inp.prop('checked')){
+						list.push({full : $inp.val(), name: $inp.attr("id")});
+					}
+				});
+				dirpath = dirpath + "/";
+				list.forEach(function(f){
+					spawn("ln", ["-s", f.full, dirpath + f.name]);
+				});
+				win.hide();
+			});
+			$("#filter-field").keyup(function(){
+				var text = $("#filter-field").val().toLowerCase();
+				$("#list").children().each(function(i, div){
+					if(text == "" || ~$($(div).children()[0]).attr('id').toLowerCase().indexOf(text)){
+						$(div).show();
+					}else{
+						$(div).hide();
+					}
+				});
+			});
+			var reader = function () {
+				fs.readFile(s.input_fifo, 'utf8', function (err, data) {
+					show_window();
+					reader();
+				})
+			}
+			reader();
+		});
+	</script>
+	<style type="text/css">
+		html {
+			margin: 0;
+			padding: 0;
+			overflow: hidden;
+		}
+		body {
+			font-family: Sans;
+			height: 320px;
+			overflow: hidden;
+			margin: 0;
+			padding: 0;
+			background-color: #c1c48b;
+			font-size: 14px;
+			-webkit-app-region: drag;
+			border: 1px solid #81654f;
+		}
+		.input-box {
+			font-family: Sans;
+			font-size: 14px;
+			border: 1px solid #81654f;
+			background-color: #c1c48b;
+			width: 90%;
+		}
+		input[type='checkbox'] {
+			margin: 0;
+			-webkit-user-select: none;
+			-webkit-app-region: no-drag;
+			white-space: nowrap ;
+		}
+		.list-elem:hover {
+			background-color: #81654f;
+			cursor: pointer;
+		}
+		label {
+			-webkit-user-select: none;
+			-webkit-app-region: no-drag;
+		}
+		.center{
+			text-align: center;
+		}
+		.close-button{
+			margin-top: 5px;
+			margin-left: 5px;
+			background-color: #81654f;
+			width: 15px;
+			height: 15px;
+			border-radius: 30px;
+			position: absolute;
+			cursor:pointer;
+			padding-left: 3px;
+			padding-bottom: 1px;
+			border: 1px solid #000;
+			-webkit-user-select: none;
+			-webkit-app-region: no-drag;
+		}
+		.ok-button{
+			margin-top: 5px;
+			margin-left: 5px;
+			background-color: #81654f;
+			width: 15px;
+			height: 15px;
+			border-radius: 30px;
+			left: 608;
+			position: absolute;
+			cursor:pointer;
+			padding-left: 3px;
+			padding-bottom: 1px;
+			border: 1px solid #000;
+			-webkit-user-select: none;
+			-webkit-app-region: no-drag;
+		}
+		#list {
+			list-style-type: none;
+			margin-left: 5%;
+			padding: 0;
+			margin-top: 15px;
+			height: 85%;
+			overflow-y: auto;
+			overflow-x: hidden;
+		}
+		::-webkit-scrollbar {
+			width: 10px;
+		}
+		::-webkit-scrollbar-track {
+			background:#c1c48b;
+			border: 1px solid #81654f;
+		}
+		::-webkit-scrollbar-thumb {
+			background:#81654f;
+			border: 1px solid #81654f;
+		}	
+	</style>
+</head>
+<body>
+	<div class="close-button">&times;</div>
+	<div class="ok-button">&#10004;</div>
+	<div>
+		<div class="center">
+			<input type="text" id="name-field" class="input-box" >
+		</div>
+		<div class="center">
+			<input type="text" id="filter-field" class="input-box" >
+		</div>
+		<div id="list">
+			<div class="list-elem"><input type="checkbox" id="music" value="/home/userr/music/all/Yivis - What does the fox say.mp3" ><label for ="music">ffgdtysdsdsfdfdfdfdffeb65ff.mp3</label></div>
+			
+		</div>
+	</div>
+</body>
+</html>
