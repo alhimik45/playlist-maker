@@ -31,7 +31,7 @@
 		/**
 		 * Returns array of filenames in given path
 		 * @param  {string} path - directory to list files
-		 * @return {string[]}
+		 * @return {{path: string, name: string}[]}
 		 */
 		function music_list (path) {
 			return $(fs.readdirSync(path)).filter(function (i,file) {
