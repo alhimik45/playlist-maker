@@ -11,8 +11,23 @@
 		var spawn = require('child_process').spawnSync;
 		var s = require("./settings").init(gui.App.argv[0]);
 		var music = [];
-		var directory_watcher = null;
+		var playlists = [];
+		var music_watcher = null;
+		var playlist_watcher = null;
 		init_fs(s.music_directory);
+		init_playlist_watcher(s.base_directory);
+		/**
+		 * Returns array of directories in given path
+		 * @param  {string} path - directory to list directories
+		 * @return {string[]}
+		 */
+		function playlist_list (path) {
+			return $(fs.readdirSync(path)).filter(function (i,file) {
+				return fs.lstatSync(path+file).isDirectory();
+			}).map(function (i, dir) {
+				return dir;
+			}).get();
+		}
 		/**
 		 * Returns array of filenames in given path
 		 * @param  {string} path - directory to list files
@@ -26,16 +41,29 @@
 			}).get();
 		}
 		/**
-		 * Starts watch to given dir_path for update music list
-		 * resets music to actial state
-		 * @param  {string} dir_path - path to directory for watching
+		 * Starts watch to playlists directory
+		 * resets playlists to actial state
+		 * @param  {string} playlist_path - path to directory for watching
 		 */
-		function init_fs (dir_path) {
-			dir_path = dir_path.replace(/\/+$/, "") + "/";
-			if(directory_watcher) directory_watcher.close();
-			music = music_list(dir_path);
-			directory_watcher = fs.watch(dir_path, function () {
-				music = music_list(dir_path);
+		function init_playlist_watcher (playlist_path) {
+			playlist_path = playlist_path.replace(/\/+$/, "") + "/";
+			if(playlist_watcher) playlist_watcher.close();
+			playlists = playlist_list(playlist_path);
+			playlist_watcher = fs.watch(playlist_path, function () {
+				playlists = playlist_list(playlist_path);
+			});
+		}
+		/**
+		 * Starts watch to given music_path for update music list
+		 * resets music to actial state
+		 * @param  {string} music_path - path to directory for watching
+		 */
+		function init_fs (music_path) {
+			music_path = music_path.replace(/\/+$/, "") + "/";
+			if(music_watcher) music_watcher.close();
+			music = music_list(music_path);
+			music_watcher = fs.watch(music_path, function () {
+				music = music_list(music_path);
 			});
 		}
 		/**
@@ -59,6 +87,15 @@
 				$div.append($label);
 				$list.append($div);
 			});
+
+			var $variants = $("#playlist-list");
+			$variants.html("");
+			playlists.forEach(function(dir){
+				var $opt = $("<option/>");
+				$opt.text(dir);
+				$variants.append($opt);
+			});
+
 			win.show();
 			win.setPosition("mouse");
 			$("#filter-field").val("");
@@ -212,7 +249,9 @@
 	<div class="ok-button">&#10004;</div>
 	<div>
 		<div class="center">
-			<input type="text" id="name-field" class="input-box" >
+			<input type="text" id="name-field" class="input-box" list="playlist-list">
+			<datalist id="playlist-list">
+			</datalist>
 		</div>
 		<div class="center">
 			<input type="text" id="filter-field" class="input-box" >
