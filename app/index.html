@@ -14,7 +14,7 @@
 		var playlists = [];
 		var music_watcher = null;
 		var playlist_watcher = null;
-		init_fs(s.music_directory);
+		init_music_watcher(s.music_directory);
 		init_playlist_watcher(s.base_directory);
 		/**
 		 * Returns array of directories in given path
@@ -58,7 +58,7 @@
 		 * resets music to actial state
 		 * @param  {string} music_path - path to directory for watching
 		 */
-		function init_fs (music_path) {
+		function init_music_watcher (music_path) {
 			music_path = music_path.replace(/\/+$/, "") + "/";
 			if(music_watcher) music_watcher.close();
 			music = music_list(music_path);
