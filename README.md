@@ -15,7 +15,5 @@ Config filename is first command-line argument of program.
 }
 ```
 
-Copyright © 2016 Alexey Kolpakov
-
-Distributed under DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE.
-
+##License
+This software is licensed under the [MIT license](LICENSE).
